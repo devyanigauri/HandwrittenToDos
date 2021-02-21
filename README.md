@@ -7,6 +7,8 @@ Devyani Gauri
 Samuel Golden
 (samgolden00@gmail.com)
 
+## Project Description
+
 ## Goals
 ### Short-Term Goals
 - explore more established model structures/approaches

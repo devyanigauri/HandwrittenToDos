@@ -2,6 +2,7 @@
 Project for converting handwritten to-do lists to typed up to-do lists
 ### Collaborators: 
 Devyani Gauri
+(dgauri@hawk.iit.edu)
 
 Samuel Golden
 (samgolden00@gmail.com)

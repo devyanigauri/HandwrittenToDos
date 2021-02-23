@@ -19,5 +19,6 @@ Samuel Golden
 
 ### Long-Term Goals
 - datasets for other languages and more complex character sets
+- make use of NLP technique with processed text
 - have app that can be used to apply packaged model and capture new data actively
 - release a downloadable app (maybe as a webapp also)

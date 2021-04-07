@@ -5,6 +5,10 @@ import tensorflow as tf
 import random
 
 
+class IAMLoader:
+	pass
+
+
 # Class for loading filtered datasets from the 'words' set in the IAM Handwriting
 # database. The argument 'datapath' expects to receive a path to the directory
 # containing a two things: a subfolder 'words' that has all the images for the 

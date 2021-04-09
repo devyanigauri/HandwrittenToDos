@@ -5,105 +5,26 @@ import tensorflow as tf
 import random
 
 
+DATAPATH_DEFAULT = os.path.normpath('../data')
+
+
 class IAMLoader:
-	pass
-
-
-# Class for loading filtered datasets from the 'words' set in the IAM Handwriting
-# database. The argument 'datapath' expects to receive a path to the directory
-# containing a two things: a subfolder 'words' that has all the images for the 
-# dataset as PNG files in no particular organization (globs all files recursively
-# regardless of subdir or whatever), and a subfolder 'ascii' that contains the
-# 'words.txt' file provided by IAM.
-class WordsLoader:
-	def __init__(self, datapath=os.path.normpath('../data/iam/'), verbose=False):
+	def __init__(self, datapath=DATAPATH_DEFAULT):
 		self.datapath = datapath
-		self.words_dir_path = os.path.join(self.datapath,'words')
-		self.words_txt_path = os.path.join(self.datapath,'ascii/words.txt')
-
-		self.attributes = ['id','clean','binarizationThreshold','x','y','w','h','tag','transcription','path']
-
-		self.v = verbose
-
-		assert os.path.isdir(self.datapath), 'need /data at toplevel of repo'
-		assert os.path.isdir(self.words_dir_path), 'need /words directory in /data directory'
-		assert os.path.isfile(self.words_txt_path), 'need /ascii/words.txt file in /data directory'
-
+		self.attributes = []
 		self.data = {}
 		self._unfiltered_data = {}
+
+		assert os.path.isdir(self.datapath), 'need valid datapath'
 
 	def __len__(self):
 		return len(self.data)
 
-	# processes words.txt file and associates that index with the files in the words/ dir
 	def index(self):
-		self.data = {}
-		self._unfiltered_data = {}
+		raise NotImplementedError
 
-		with open(self.words_txt_path, mode='r') as f:
-			if self.v:
-				print(f'Reading file {self.words_txt_path} ...',end='')
-			raw = f.read()
-			if self.v:
-				print(' done!')
-
-		if self.v:
-			print('Processing words.txt info...',end='')
-
-		for line in raw.split('\n'):
-			if line and (not line[0] == '#'):
-				l = line.split(' ')
-				if len(l) != 9:
-					continue
-
-				self.data[l[0]] = {
-					self.attributes[0]:  l[0],
-					self.attributes[1]: True if (l[1] == 'ok') else False,
-					self.attributes[2]: int(l[2]),
-					self.attributes[3]: int(l[3]),
-					self.attributes[4]: int(l[4]),
-					self.attributes[5]: int(l[5]),
-					self.attributes[6]: int(l[6]),
-					self.attributes[7]: l[7],
-					self.attributes[8]: l[8],
-					self.attributes[9]: None
-				}
-
-		if self.v:
-				print(' done!')
-
-		if self.v:
-			print(f"Finding all PNG files in {self.words_dir_path} ...", end='')
-
-		image_paths = glob.glob(self.words_dir_path + '/**/*.png', recursive=True)
-
-		if self.v:
-			print(f" done!")
-
-		if self.v:
-			print(f"Associating all found image files with indices...")
-
-		for p in image_paths:
-			try:
-				basename_no_ext = os.path.basename(p)[:-4]
-				datum = self.data[basename_no_ext]
-				datum['path'] = os.path.abspath(p)
-			except KeyError as e:
-				if self.v:
-					print('No matching datum in loader.data for file name: '+str(p))
-				continue
-
-		removed_count = 0
-		keys = list(self.data.keys())
-		for k in keys:
-			if not self.data[k]['path']:
-				del self.data[k]
-				removed_count += 1
-
-		self._unfiltered_data = self.data.copy()
-
-		print(f'Indexing done! {len(self.data)} entries indexed.')
-		print(f'Could not find associated images for {removed_count} entries in words.txt.')
+	def load(self):
+		raise NotImplementedError
 
 	# returns data to unfiltered state
 	def clear_filters(self):
@@ -140,6 +61,83 @@ class WordsLoader:
 			if condition(self.data[k][attribute]):
 				new_data[k] = self.data[k].copy()
 		self.data = new_data
+
+
+# Class for loading filtered datasets from the 'words' set in the IAM Handwriting
+# database. The argument 'datapath' expects to receive a path to the directory
+# containing all of the words images organized in any way (globs all files recursively
+# regardless of subdir or whatever). The argument 'words_txt_path' expects to be a 
+# path to the 'words.txt' file.
+class WordsLoader:
+	def __init__(self, datapath=DATAPATH_DEFAULT, words_txt_path=os.path.join(DATAPATH_DEFAULT, "words.txt")):
+		IAMLoader.__init__(self, datapath=datapath)
+		self.words_dir_path = os.path.normpath(self.datapath)
+		self.words_txt_path = os.path.normpath(words_txt_path)
+ 
+		self.attributes = ['id','clean','binarizationThreshold','x','y','w','h','tag','transcription','path']
+
+		assert os.path.isdir(self.words_dir_path), "invalid datapath '" + self.words_dir_path + "'!"
+		assert os.path.isfile(self.words_txt_path), "invalid words.txt file!"
+
+	# processes words.txt file and associates that index with the files in the words/ dir
+	def index(self):
+		self.data = {}
+		self._unfiltered_data = {}
+
+		with open(self.words_txt_path, mode='r') as f:
+			print(f'Reading file {self.words_txt_path} ...',end='')
+			raw = f.read()
+			print(' done!')
+
+		print('Processing words.txt info...',end='')
+
+		for line in raw.split('\n'):
+			if line and (not line[0] == '#'):
+				l = line.split(' ')
+				if len(l) != 9:
+					continue
+
+				self.data[l[0]] = {
+					self.attributes[0]:  l[0],
+					self.attributes[1]: True if (l[1] == 'ok') else False,
+					self.attributes[2]: int(l[2]),
+					self.attributes[3]: int(l[3]),
+					self.attributes[4]: int(l[4]),
+					self.attributes[5]: int(l[5]),
+					self.attributes[6]: int(l[6]),
+					self.attributes[7]: l[7],
+					self.attributes[8]: l[8],
+					self.attributes[9]: None
+				}
+
+		print(' done!')
+		print(f"Finding all PNG files in {self.words_dir_path} ...", end='')
+
+		image_paths = glob.glob(self.words_dir_path + '/**/*.png', recursive=True)
+
+		print(f" done!")
+		print(f"Associating all found image files with indices...")
+
+		for p in image_paths:
+			try:
+				basename_no_ext = os.path.basename(p)[:-4]
+				datum = self.data[basename_no_ext]
+				datum['path'] = os.path.abspath(p)
+			except KeyError as e:
+				print('No matching datum in loader.data for file name: '+str(p))
+				continue
+
+		removed_count = 0
+		keys = list(self.data.keys())
+		for k in keys:
+			if not self.data[k]['path']:
+				del self.data[k]
+				removed_count += 1
+
+		self._unfiltered_data = self.data.copy()
+
+		print(f'Indexing done! {len(self.data)} entries indexed.')
+		print(f'Could not find associated images for {removed_count} entries in words.txt.')
 
 	# splits data into training, validation, and testing sets, loads image data,
 	# and converts everything to three separate TF Datasets. Can perform batching,

@@ -574,3 +574,83 @@ class LinesLoader(IAMLoader):
 			test_dataset = test_dataset.batch(batch_size).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
 		return train_dataset, valid_dataset, test_dataset
+
+
+class FormsLoader(IAMLoader):
+	def __init__(self, datapath=DATAPATH_DEFAULT, forms_txt_path=os.path.join(DATAPATH_DEFAULT, "forms.txt")):
+		IAMLoader.__init__(self, datapath=datapath)
+		self.forms_dir_path = os.path.normpath(self.datapath)
+		self.forms_txt_path = os.path.normpath(forms_txt_path)
+ 
+		self.attributes = ['id','writerId','sentenceCount','clean','lineTotal','cleanLines','wordTotal','cleanWords','path']
+
+		assert os.path.isdir(self.forms_dir_path), "invalid datapath '" + self.forms_dir_path + "'!"
+		assert os.path.isfile(self.forms_txt_path), "invalid forms.txt file!"
+
+	def process_transcription(self, raw):
+		return raw.split('|')
+
+	def index(self):
+		self.data = {}
+		self._unfiltered_data = {}
+
+		with open(self.forms_txt_path, mode='r') as f:
+			print(f'Reading file {self.forms_txt_path} ...',end='')
+			raw = f.read()
+			print(' done!')
+
+		print('Processing forms.txt info...',end='')
+
+		for line in raw.split('\n'):
+			if line and (not line[0] == '#'):
+				l = line.split(' ')
+				if len(l) != 8:
+					continue
+
+				self.data[l[0]] = {
+					self.attributes[0]: l[0],
+					self.attributes[1]: l[1],
+					self.attributes[2]: int(l[2]),
+					self.attributes[3]: True if (l[3] == 'all') else False,
+					self.attributes[4]: int(l[4]),
+					self.attributes[5]: int(l[5]),
+					self.attributes[6]: int(l[6]),
+					self.attributes[7]: int(l[7]),
+					self.attributes[8]: None
+				}
+
+		print(' done!')
+		print(f"Finding all PNG files in {self.forms_dir_path} ...", end='')
+
+		image_paths = glob.glob(self.forms_dir_path + '/**/*.png', recursive=True)
+
+		print(f" done!")
+		print(f"Associating all found image files with indices...")
+
+		unassoc_count = 0
+		for p in image_paths:
+			try:
+				basename_no_ext = os.path.basename(p)[:-4]
+				datum = self.data[basename_no_ext]
+				datum['path'] = os.path.abspath(p)
+			except KeyError as e:
+				unassoc_count += 1
+				continue
+
+		print(f'Could not find index entries for {unassoc_count} images in datapath.')
+
+		removed_count = 0
+		keys = list(self.data.keys())
+		for k in keys:
+			if not self.data[k]['path']:
+				del self.data[k]
+				removed_count += 1
+
+		self._unfiltered_data = self.data.copy()
+
+		print(f'Could not find associated images for {removed_count} entries in forms.txt.')
+		print(f'Indexing done! {len(self.data)} entries indexed.')
+
+	def load(self, valid_split=0.2, test_split=0.1, shuffle=True, binarize=True, batch_size=0):
+		# not sure how to load this, what would the labels be?
+		return None

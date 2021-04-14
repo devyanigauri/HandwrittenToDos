@@ -118,14 +118,17 @@ class WordsLoader(IAMLoader):
 		print(f" done!")
 		print(f"Associating all found image files with indices...")
 
+		unassoc_count = 0
 		for p in image_paths:
 			try:
 				basename_no_ext = os.path.basename(p)[:-4]
 				datum = self.data[basename_no_ext]
 				datum['path'] = os.path.abspath(p)
 			except KeyError as e:
-				print('No matching datum in loader.data for file name: '+str(p))
+				unassoc_count += 1
 				continue
+
+		print(f'Could not find index entries for {unassoc_count} images in datapath.')
 
 		removed_count = 0
 		keys = list(self.data.keys())
@@ -136,8 +139,8 @@ class WordsLoader(IAMLoader):
 
 		self._unfiltered_data = self.data.copy()
 
-		print(f'Indexing done! {len(self.data)} entries indexed.')
 		print(f'Could not find associated images for {removed_count} entries in words.txt.')
+		print(f'Indexing done! {len(self.data)} entries indexed.')
 
 	# splits data into training, validation, and testing sets, loads image data,
 	# and converts everything to three separate TF Datasets. Can perform batching,
